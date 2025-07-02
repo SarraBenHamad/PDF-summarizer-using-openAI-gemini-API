@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import google.generativeai as genai
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import tempfile
 from flask_cors import CORS
 
@@ -151,5 +151,9 @@ def summarize_pdf():
 def health_check():
     return jsonify({"status": "healthy"}), 200
 
+@app.route("/", methods=["GET"])
+def serve_frontend():
+    return send_from_directory("frontend", "index.html")
+
 if __name__ == "__main__":    
-    app.run(debug=True, port=5000, host='0.0.0.0')
+    app.run(debug=True)
