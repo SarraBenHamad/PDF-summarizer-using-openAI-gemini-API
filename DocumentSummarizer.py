@@ -24,12 +24,36 @@ def extract_text_from_pdf(pdf_path):
     doc.close()  
     return all_text
 
+
+def extract_text_from_file(file_path, file_extension):
+    """Extract text from different file types."""
+    try:
+        if file_extension in ['.md', '.txt']:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        elif file_extension == '.pdf':
+            return extract_text_from_pdf(file_path)
+        else:
+            return f"Unsupported file type: {file_extension}"
+    except Exception as e:
+        return f"Error reading file: {str(e)}"
+    
+def get_file_extension(filename):
+    """Get file extension from filename."""
+    return os.path.splitext(filename.lower())[1]
+
+def is_supported_file(filename):
+    """Check if file type is supported."""
+    supported_extensions = ['.pdf', '.md', '.txt']
+    return get_file_extension(filename) in supported_extensions
+
+
 def summarize_with_openai(text, word_count):
     """Summarize text using OpenAI GPT"""
     if word_count < 500:
-        prompt = f"Summarize the following text in 3-5 clear bullet points:\n\n{text}"
+        prompt = f"Summarize the following text in 3-5 clear bullet points and reply with the same language provided in the text. step1:start with a general overall title that describes the content of the text just once,step2:summarize the text as demanded:\n\n{text}"
     else:
-        prompt = f"Summarize the following text in 5-7 clear bullet points:\n\n{text}"
+        prompt = f"Summarize the following text in 5-7 clear bullet points and reply with the same language provided in the text. step1:start with a general overall title that describes the content of the text just once,step2:summarize the text as demanded:\n\n{text}"
     
     try:
         response = client.chat.completions.create(
@@ -45,9 +69,9 @@ def summarize_with_openai(text, word_count):
 def summarize_with_gemini(text, word_count):
     """Summarize text using Google Gemini"""
     if word_count < 500:
-        prompt = f"Summarize the following text in 3-5 clear bullet points:\n\n{text}"
+        prompt = f"Summarize the following text in 3-5 clear bullet points and reply with the same language provided in the text. step1:start with a general overall title that describes the content of the text just once,step2:summarize the text as demanded:\n\n{text}"
     else:
-        prompt = f"Summarize the following text in 5-7 clear bullet points:\n\n{text}"
+        prompt = f"Summarize the following text in 5-7 clear bullet points and reply with the same language provided in the text. step1:start with a general overall title that describes the content of the text just once ,step2:summarize the text as demanded:\n\n{text}"
     
     try:
         model = genai.GenerativeModel("gemini-1.5-flash")
@@ -63,14 +87,21 @@ def summarize_with_gemini(text, word_count):
     except Exception as e:
         return f"Error generating summary with Gemini: {str(e)}"
 
-def summarize(pdf_path, ai_provider="openai"):
-    text = extract_text_from_pdf(pdf_path)
+def summarize(file_path, filename, ai_provider="openai"):
+    """Summarize content from various file types."""
+    file_extension = get_file_extension(filename)
     
-    # Check if text was extracted
+    # Extract text based on file type
+    text = extract_text_from_file(file_path, file_extension)
+    
+    # Check if text was extracted successfully
     if not text.strip():
-        return "No text could be extracted from the PDF."
+        return f"No text could be extracted from the {file_extension.upper()} file."
     
-    
+    # Check for error messages
+    if text.startswith("Error") or text.startswith("Unsupported"):
+        return text
+        
     word_count = len(text.split())
     
     # Route to appropriate AI provider
@@ -91,13 +122,22 @@ def summarize_pdf():
         if file.filename == '':
             return jsonify({"error": "No selected file"}), 400
 
-        if not file.filename.lower().endswith('.pdf'):
-            return jsonify({"error": "File is not a PDF"}), 400
+        # Check if file type is supported
+        if not is_supported_file(file.filename):
+            return jsonify({"error": "File must be PDF, Markdown (.md), or Text (.txt)"}), 400
+
+        # Get AI provider from request (default to openai)
+        ai_provider = request.form.get('ai_provider', 'openai').lower()
+        if ai_provider not in ['openai', 'gemini']:
+            ai_provider = 'openai'
+
+        # Get file extension for proper handling
+        file_extension = get_file_extension(file.filename)
 
         # Save uploaded PDF temporarily
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
             file.save(tmp.name)
-            summary = summarize(tmp.name)
+            summary = summarize(tmp.name, file.filename,ai_provider)
             
         # Clean up temporary file
         os.unlink(tmp.name)

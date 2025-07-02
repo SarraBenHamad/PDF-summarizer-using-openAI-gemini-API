@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PDF Summarizer</title>
+    <title>File Summarizer</title>
     <style>
         /* Reset & base */
         * {
@@ -200,7 +200,7 @@
 </head>
 <body>
 
-<h1>🔍 PDF Summarizer</h1>
+<h1>🔍 File Summarizer</h1>
 
 <div class="container">
     <div id="status-indicator">
@@ -215,14 +215,14 @@
             <option value="gemini">✨ Google Gemini</option>
         </select>
         
-        <label for="pdfFile">Choose PDF file to summarize:</label>
+        <label for="pdfFile">Choose file to summarize:</label>
         <div class="file-input-wrapper">
             <input type="file" id="pdfFile" accept="application/pdf" required />
             <label for="pdfFile" class="file-input-label" id="fileLabel">
-                📄 Select PDF File
+                📄 Select File
             </label>
         </div>
-        <button type="submit" id="submitBtn">✨ Summarize PDF</button>
+        <button type="submit" id="submitBtn">✨ Summarize File</button>
     </form>
 </div>
 
@@ -270,7 +270,7 @@
             fileLabel.textContent = `📄 ${file.name}`;
             fileLabel.classList.add('file-selected');
         } else {
-            fileLabel.textContent = '📄 Select PDF File';
+            fileLabel.textContent = '📄 Select File';
             fileLabel.classList.remove('file-selected');
         }
     });
@@ -283,20 +283,20 @@
         const aiProvider = aiProviderSelect.value;
         
         if (!file) {
-            alert('Please select a PDF file.');
+            alert('Please select a file.');
             return;
         }
 
         // Check file size (10MB limit)
         if (file.size > 10 * 1024 * 1024) {
-            alert('File size too large. Please select a PDF smaller than 10MB.');
+            alert('File size too large. Please select a file smaller than 10MB.');
             return;
         }
 
         submitBtn.disabled = true;
         submitBtn.textContent = `⏳ Processing with ${aiProvider.toUpperCase()}...`;
         summaryBox.style.display = 'block';
-        summaryBox.innerHTML = `<div class="loading">🔄 Summarizing your PDF with ${aiProvider.toUpperCase()}, please wait...</div>`;
+        summaryBox.innerHTML = `<div class="loading">🔄 Summarizing your file with ${aiProvider.toUpperCase()}, please wait...</div>`;
         downloadBtn.style.display = 'none';
 
         try {
@@ -325,7 +325,7 @@
             summaryBox.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
         } finally {
             submitBtn.disabled = false;
-            submitBtn.textContent = '✨ Summarize PDF';
+            submitBtn.textContent = '✨ Summarize file';
         }
     });
 
@@ -338,7 +338,7 @@
 
         const a = document.createElement('a');
         a.href = url;
-        a.download = `PDF_Summary_${aiProviderSelect.value}_${new Date().toISOString().split('T')[0]}.txt`;
+        a.download = `File_Summary_${aiProviderSelect.value}_${new Date().toISOString().split('T')[0]}.txt`;
         document.body.appendChild(a);
         a.click();
 
