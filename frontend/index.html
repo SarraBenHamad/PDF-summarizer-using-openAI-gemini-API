@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PDF Summarizer</title>
+    <style>
+        /* Reset & base */
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; 
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            align-items: center;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            font-size: 2.5rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0 20px 0;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            background: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+
+        input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            z-index: 1;
+        }
+
+        .file-input-label {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            position: relative;
+            z-index: 0;
+        }
+
+        .file-input-label:hover {
+            background: #e9ecef;
+            border-color: #6c757d;
+        }
+
+        .file-selected {
+            background: #d4edda !important;
+            border-color: #28a745 !important;
+            color: #155724;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 15px 35px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        button:disabled {
+            background: #a5c9ea;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #summary-box {
+            margin-top: 30px;
+            max-width: 700px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            white-space: pre-wrap;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #2c3e50;
+            text-align: left;
+            backdrop-filter: blur(10px);
+        }
+
+        .loading {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        #downloadBtn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        #downloadBtn:hover:not(:disabled) {
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #28a745;
+        }
+
+        .status-offline {
+            background: #dc3545;
+        }
+
+        @media (max-width: 480px) {
+            .container, #summary-box {
+                width: 95%;
+                padding: 20px;
+                margin: 10px;
+            }
+            button {
+                width: 100%;
+            }
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<h1>🔍 PDF Summarizer</h1>
+
+<div class="container">
+    <div id="status-indicator">
+        <span class="status-indicator status-offline"></span>
+        <span id="status-text">Checking server connection...</span>
+    </div>
+    
+    <form id="uploadForm">
+        <label for="aiProvider">Choose AI Provider:</label>
+        <select id="aiProvider" required>
+            <option value="openai">🤖 OpenAI (GPT-3.5 Turbo)</option>
+            <option value="gemini">✨ Google Gemini</option>
+        </select>
+        
+        <label for="pdfFile">Choose PDF file to summarize:</label>
+        <div class="file-input-wrapper">
+            <input type="file" id="pdfFile" accept="application/pdf" required />
+            <label for="pdfFile" class="file-input-label" id="fileLabel">
+                📄 Select PDF File
+            </label>
+        </div>
+        <button type="submit" id="submitBtn">✨ Summarize PDF</button>
+    </form>
+</div>
+
+<div id="summary-box" style="display:none;"></div>
+<button id="downloadBtn" style="display:none;">💾 Download Summary</button>
+
+<script>
+    const form = document.getElementById('uploadForm');
+    const fileInput = document.getElementById('pdfFile');
+    const aiProviderSelect = document.getElementById('aiProvider');
+    const fileLabel = document.getElementById('fileLabel');
+    const summaryBox = document.getElementById('summary-box');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const statusIndicator = document.querySelector('.status-indicator');
+    const statusText = document.getElementById('status-text');
+
+    let currentSummary = '';
+    const API_BASE_URL = 'http://localhost:5000';
+
+    // Check server connection on load
+    async function checkServerConnection() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/health`);
+            if (response.ok) {
+                statusIndicator.classList.remove('status-offline');
+                statusIndicator.classList.add('status-online');
+                statusText.textContent = 'Server connected';
+                submitBtn.disabled = false;
+            } else {
+                throw new Error('Server not responding');
+            }
+        } catch (error) {
+            statusIndicator.classList.remove('status-online');
+            statusIndicator.classList.add('status-offline');
+            statusText.textContent = 'Server offline - Please start the Flask app';
+            submitBtn.disabled = true;
+        }
+    }
+
+    // File input change handler
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            fileLabel.textContent = `📄 ${file.name}`;
+            fileLabel.classList.add('file-selected');
+        } else {
+            fileLabel.textContent = '📄 Select PDF File';
+            fileLabel.classList.remove('file-selected');
+        }
+    });
+
+    // Form submission handler
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const file = fileInput.files[0];
+        const aiProvider = aiProviderSelect.value;
+        
+        if (!file) {
+            alert('Please select a PDF file.');
+            return;
+        }
+
+        // Check file size (10MB limit)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File size too large. Please select a PDF smaller than 10MB.');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = `⏳ Processing with ${aiProvider.toUpperCase()}...`;
+        summaryBox.style.display = 'block';
+        summaryBox.innerHTML = `<div class="loading">🔄 Summarizing your PDF with ${aiProvider.toUpperCase()}, please wait...</div>`;
+        downloadBtn.style.display = 'none';
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('ai_provider', aiProvider);
+
+            const response = await fetch(`${API_BASE_URL}/summarize`, {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || `Server error: ${response.statusText}`);
+            }
+
+            currentSummary = data.summary;
+            const providerUsed = data.ai_provider || aiProvider.toUpperCase();
+            summaryBox.innerHTML = `<h3>📋 Summary (Generated by ${providerUsed}):</h3>${currentSummary}`;
+            downloadBtn.style.display = 'inline-block';
+
+        } catch (error) {
+            console.error('Error:', error);
+            summaryBox.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '✨ Summarize PDF';
+        }
+    });
+
+    // Download handler
+    downloadBtn.addEventListener('click', () => {
+        if (!currentSummary) return;
+
+        const blob = new Blob([currentSummary], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `PDF_Summary_${aiProviderSelect.value}_${new Date().toISOString().split('T')[0]}.txt`;
+        document.body.appendChild(a);
+        a.click();
+
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }, 0);
+    });
+
+    // Check server connection on page load
+    checkServerConnection();
+    
+    // Recheck connection every 30 seconds
+    setInterval(checkServerConnection, 30000);
+</script>
+
+</body>
+</html>
